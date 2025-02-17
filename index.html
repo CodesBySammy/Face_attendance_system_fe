@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Attendance</title>
+</head>
+<body>
+    <h1>Face Recognition System</h1>
+
+    <!-- Camera for Registration -->
+    <h2>Register Face</h2>
+    <input type="text" id="name" placeholder="Enter Name">
+    <video id="video" width="320" height="240" autoplay></video>
+    <button onclick="captureAndRegister()">Register</button>
+
+    <!-- Camera for Attendance -->
+    <h2>Mark Attendance</h2>
+    <video id="video2" width="320" height="240" autoplay></video>
+    <button onclick="captureAndRecognize()">Scan Face</button>
+
+    <p id="result"></p>
+
+    <script>
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { document.getElementById("video").srcObject = stream; })
+            .catch(err => console.error("Error accessing webcam: ", err));
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { document.getElementById("video2").srcObject = stream; })
+            .catch(err => console.error("Error accessing webcam: ", err));
+
+        function captureImage(videoElement) {
+            let canvas = document.createElement("canvas");
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            let ctx = canvas.getContext("2d");
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL("image/jpeg");
+        }
+
+        async function captureAndRegister() {
+            let name = document.getElementById("name").value.trim();
+            if (!name) return alert("Enter a name to register");
+
+            let image = captureImage(document.getElementById("video"));
+
+            try {
+                let response = await fetch("http://localhost:5001/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: name, image: image })
+                });
+                let data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                console.error("Error registering face:", error);
+                alert("Error registering face.");
+            }
+        }
+
+        async function captureAndRecognize() {
+            let image = captureImage(document.getElementById("video2"));
+
+            try {
+                let response = await fetch("http://localhost:5001/recognize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ image: image })
+                });
+                let data = await response.json();
+                document.getElementById("result").innerText = `Status: ${data.status}, Name: ${data.name}`;
+            } catch (error) {
+                console.error("Error scanning face:", error);
+                alert("Error scanning face.");
+            }
+        }
+    </script>
+</body>
+</html>
